@@ -1,183 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Beef AI</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+import express from "express";
+import cors from "cors";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-<style>
-  body { 
-    background: #09090b; 
-    color: #e4e4e7; 
-    font-family: 'Inter', sans-serif; 
-    overflow: hidden; 
-  }
-  
-  /* Custom Scrollbar */
-  #chat-box { scroll-behavior: smooth; }
-  #chat-box::-webkit-scrollbar { width: 6px; }
-  #chat-box::-webkit-scrollbar-track { background: transparent; }
-  #chat-box::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+const app = express();
 
-  /* Message Bubbles */
-  .msg { 
-    padding: 12px 16px; 
-    border-radius: 12px; 
-    font-size: 0.95rem; 
-    max-width: 85%; 
-    word-wrap: break-word; 
-    line-height: 1.6;
-    animation: fadeIn 0.3s ease;
-  }
-  
-  /* AI Bubble Styling */
-  .ai-msg { 
-    background: #18181b; 
-    border: 1px solid #27272a; 
-    color: #d4d4d4; 
-    margin-right: auto; 
-    border-bottom-left-radius: 2px;
-  }
+// Allow requests from your GitHub Pages site
+app.use(
+    cors({
+        origin: "https://thisisforworktrust.github.io/ai" // replace with your GitHub Pages URL
+    })
+);
 
-  /* AI Markdown Styling (Code blocks, etc) */
-  .ai-msg pre { background: #111; padding: 10px; border-radius: 6px; overflow-x: auto; margin-top: 10px; }
-  .ai-msg code { font-family: monospace; background: #222; padding: 2px 4px; border-radius: 4px; }
-  .ai-msg p { margin-bottom: 8px; }
-  .ai-msg p:last-child { margin-bottom: 0; }
+app.use(express.json());
 
-  /* User Bubble Styling */
-  .user-msg { 
-    background: #2563eb; 
-    color: white; 
-    margin-left: auto; 
-    text-align: right;
-    border-bottom-right-radius: 2px;
-  }
-  
-  /* Error Bubble */
-  .error-msg { background: #451a1a; color: #fca5a5; margin: auto; }
+// ⚠️ Replace with your real key
+const API_KEY = "AIzaSyC8SFJDSLq4D8eoXpyNpuvNYucaWforr_c";
+const genAI = new GoogleGenerativeAI(API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-</style>
-</head>
-
-<body class="flex flex-col h-screen">
-
-<div class="border-b border-zinc-800 bg-zinc-950 p-4 flex justify-between items-center shadow-lg">
-  <div class="flex items-center gap-2">
-    <h1 class="font-bold text-white text-xl tracking-tight">BEEF.<span class="text-blue-500">AI</span></h1>
-  </div>
-  <div id="status" class="text-xs font-mono text-green-500">● ONLINE</div>
-</div>
-
-<div id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4">
-  <div class="ai-msg msg">
-    Hello! I am Beef. How can I help you today?
-  </div>
-</div>
-
-<div class="p-4 bg-zinc-950 border-t border-zinc-800">
-  <form id="inputForm" class="flex gap-2 max-w-4xl mx-auto">
-    <input id="prompt" type="text" placeholder="Type a message..." autocomplete="off" required
-      class="flex-1 bg-zinc-900 border border-zinc-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors">
-    
-    <button type="submit" id="send-btn"
-      class="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-      Send
-    </button>
-  </form>
-</div>
-
-<script>
-const chatBox = document.getElementById('chat-box');
-const inputForm = document.getElementById('inputForm');
-const promptInput = document.getElementById('prompt');
-const sendBtn = document.getElementById('send-btn');
-const statusDiv = document.getElementById('status');
-
-// Function to add messages to the screen
-function addMessage(text, type) {
-  const div = document.createElement('div');
-  
-  if (type === 'user') {
-    div.className = 'msg user-msg';
-    div.textContent = text;
-  } else if (type === 'ai') {
-    div.className = 'msg ai-msg';
-    // Use Marked.js to render code blocks and bold text
-    div.innerHTML = marked.parse(text);
-  } else if (type === 'error') {
-    div.className = 'msg error-msg';
-    div.textContent = text;
-  }
-  
-  chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
-  return div;
-}
-
-// Handle Form Submit
-inputForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const userText = promptInput.value.trim();
-  if (!userText) return;
-
-  // 1. Show User Message
-  addMessage(userText, 'user');
-  promptInput.value = '';
-  
-  // 2. Lock Interface
-  promptInput.disabled = true;
-  sendBtn.disabled = true;
-  statusDiv.textContent = "○ THINKING...";
-  statusDiv.className = "text-xs font-mono text-yellow-500";
-
-  // 3. Create a placeholder bubble for AI
-  const loadingBubble = document.createElement('div');
-  loadingBubble.className = 'msg ai-msg animate-pulse';
-  loadingBubble.textContent = "...";
-  chatBox.appendChild(loadingBubble);
-  chatBox.scrollTop = chatBox.scrollHeight;
-
-  try {
-    // 4. Send to Backend
-    const response = await fetch('http://localhost:3000/ask', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: userText })
-    });
-    
-    const data = await response.json();
-
-    // 5. Remove placeholder and show real response
-    chatBox.removeChild(loadingBubble);
-    
-    if (data.reply) {
-      addMessage(data.reply, 'ai');
-    } else {
-      addMessage('Error: No reply from server.', 'error');
+app.post("/ask", async (req, res) => {
+    try {
+        const { prompt } = req.body;
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const replyText = await response.text(); // await is important
+        res.json({ reply: replyText });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
     }
-
-  } catch (err) {
-    chatBox.removeChild(loadingBubble);
-    console.error(err);
-    addMessage('Error: Could not connect to server.', 'error');
-  } finally {
-    // 6. Unlock Interface
-    promptInput.disabled = false;
-    sendBtn.disabled = false;
-    promptInput.focus();
-    statusDiv.textContent = "● ONLINE";
-    statusDiv.className = "text-xs font-mono text-green-500";
-  }
 });
-</script>
 
-</body>
-</html>
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+});
