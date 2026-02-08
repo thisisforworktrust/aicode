@@ -11,22 +11,19 @@ app.use(express.json());
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Use a valid Gemini model
-const model = genAI.getGenerativeModel({ model: "text-bison-001" });
+// FIXED: Use a Gemini model (Flash is fast and good for chat)
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 app.post("/ask", async (req, res) => {
   try {
     const { prompt } = req.body;
 
+    // Generate content
     const result = await model.generateContent(prompt);
-
-    // Safe way to extract text
-    let replyText = "";
-    if (result?.candidates?.length) {
-      replyText = result.candidates.map(c => c.output).join("\n");
-    } else if (result?.output) {
-      replyText = result.output;
-    }
+    const response = await result.response;
+    
+    // FIXED: The SDK provides a .text() helper to get the answer safely
+    const replyText = response.text();
 
     res.json({ reply: replyText });
 
