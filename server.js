@@ -8,7 +8,7 @@ app.use(express.json());
 
 // PASTE YOUR KEY HERE DIRECTLY (replace "AIza...")
 // Do not keep this permanently, but do it now to fix the error.
-const API_KEY = "AIzaSyC8SFJDSLq4D8eoXpyNpuvNYucaWforr_c"; 
+const API_KEY = "insertyourapi"; 
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
@@ -29,3 +29,4 @@ app.post("/ask", async (req, res) => {
 });
 
 app.listen(3000, () => console.log("Server running on port 3000"));
+
