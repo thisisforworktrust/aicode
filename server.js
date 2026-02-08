@@ -16,7 +16,7 @@ if (!process.env.GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 app.post("/ask", async (req, res) => {
   try {
@@ -45,3 +45,4 @@ app.post("/ask", async (req, res) => {
 app.listen(3000, () => {
   console.log("✅ Server running at http://localhost:3000");
 });
+
