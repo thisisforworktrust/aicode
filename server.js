@@ -9,27 +9,36 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Check if API Key is loaded
+if (!process.env.GEMINI_API_KEY) {
+  console.error("❌ ERROR: GEMINI_API_KEY is missing in .env file");
+  process.exit(1);
+}
 
-// FIXED: Use a Gemini model (Flash is fast and good for chat)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 app.post("/ask", async (req, res) => {
   try {
     const { prompt } = req.body;
+    console.log("📩 Received prompt:", prompt);
 
-    // Generate content
     const result = await model.generateContent(prompt);
     const response = await result.response;
     
-    // FIXED: The SDK provides a .text() helper to get the answer safely
+    // Check if the AI returned text
     const replyText = response.text();
-
+    
+    console.log("🤖 AI Replied:", replyText); // Log successful reply
     res.json({ reply: replyText });
 
   } catch (error) {
-    console.error("Error generating AI response:", error);
-    res.status(500).json({ error: "Error generating response" });
+    console.error("❌ Error generating response:", error);
+    
+    // Send the actual error message to the frontend so you can see it
+    res.status(500).json({ 
+      reply: "Error: " + (error.message || "Something went wrong on the server.") 
+    });
   }
 });
 
