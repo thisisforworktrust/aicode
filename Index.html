@@ -21,8 +21,7 @@
         const statusSpan = document.getElementById('status');
         const logsDiv = document.getElementById('logs');
         
-        // 1. Host the Peer ID that the Client is looking for
-        // Your Client looks for "beef-ai-server", so we use that ID here.
+        // This ID must match what the GitHub Client is looking for
         const peer = new Peer("beef-ai-server");
 
         function log(msg) {
@@ -35,13 +34,17 @@
         peer.on('open', (id) => {
             statusSpan.innerText = "ONLINE (Hosting: " + id + ")";
             statusSpan.classList.add('online');
+            statusSpan.classList.remove('status'); // Remove yellow
             log("Bridge is active. Waiting for Client...");
         });
 
         peer.on('error', (err) => {
-            statusSpan.innerText = "ERROR";
+            statusSpan.innerText = "ERROR: " + err.type;
             statusSpan.classList.add('error');
             log("PeerJS Error: " + err.type);
+            if(err.type === 'unavailable-id') {
+                log("ID is taken. Is the bridge already running in another tab?");
+            }
         });
 
         peer.on('connection', (conn) => {
@@ -51,19 +54,22 @@
                 log("Received from Client: " + userPrompt);
 
                 try {
-                    // 2. Forward the message to your local server.js
                     log("Forwarding to server.js...");
                     
+                    // Added try/catch specifically for the fetch
                     const response = await fetch('http://localhost:3000/ask', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ prompt: userPrompt })
                     });
 
+                    if (!response.ok) {
+                        throw new Error(`Server responded with ${response.status}`);
+                    }
+
                     const data = await response.json();
                     
                     if (data.reply) {
-                        // 3. Send the AI answer back to the Client
                         log("Got answer from server.js. Sending to Client.");
                         conn.send(data.reply); 
                     } else {
@@ -73,7 +79,7 @@
 
                 } catch (err) {
                     log("Failed to contact server.js: " + err.message);
-                    conn.send("Error: Middleman could not reach server.js. Is it running?");
+                    conn.send("Error: Middleman could not reach server.js. Ensure Node server is running.");
                 }
             });
 
