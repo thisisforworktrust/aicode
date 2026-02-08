@@ -3,110 +3,264 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gemini AI Chat</title>
+<title>Gemini Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
 <style>
+  * { box-sizing: border-box; }
+  
   body {
-    font-family: Arial, sans-serif;
-    background: #1e1e1e;
-    color: #fff;
+    font-family: 'Inter', sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     height: 100vh;
     margin: 0;
-    padding: 0;
   }
-  h1 { margin-top: 20px; }
+
+  /* Main Chat Container */
+  .chat-container {
+    width: 95%;
+    max-width: 800px;
+    height: 90vh;
+    background: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Header */
+  header {
+    background: #252525;
+    padding: 15px 20px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  header h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* Chat Area */
   #chat {
-    width: 90%;
-    max-width: 600px;
-    height: 70%;
-    background: #2c2c2c;
-    margin: 20px 0;
-    padding: 10px;
+    flex: 1;
+    padding: 20px;
     overflow-y: auto;
-    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
   }
+
+  /* Scrollbar styling */
+  #chat::-webkit-scrollbar { width: 8px; }
+  #chat::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+
+  /* Messages */
   .message {
-    margin: 10px 0;
+    max-width: 80%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-wrap: break-word;
+    animation: fadeIn 0.3s ease;
   }
-  .user { color: #00ff99; }
-  .ai { color: #00bfff; }
+
+  /* User Message (Right, Blue) */
+  .message.user {
+    align-self: flex-end;
+    background: #3b82f6; /* Blue */
+    color: white;
+    border-bottom-right-radius: 2px;
+  }
+
+  /* AI Message (Left, Dark Gray) */
+  .message.ai {
+    align-self: flex-start;
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-bottom-left-radius: 2px;
+    border: 1px solid #333;
+  }
+  
+  /* Error Message */
+  .message.error {
+    align-self: center;
+    background: #451a1a;
+    color: #ff9999;
+    font-size: 0.9rem;
+  }
+
+  /* Formatting Markdown inside AI bubbles */
+  .message.ai pre {
+    background: #111;
+    padding: 10px;
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+  .message.ai code {
+    font-family: monospace;
+    background: #111;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+
+  /* Input Area */
+  .input-area {
+    padding: 20px;
+    background: #252525;
+    border-top: 1px solid #333;
+  }
+
   #inputForm {
     display: flex;
-    width: 90%;
-    max-width: 600px;
+    gap: 10px;
+    position: relative;
   }
+
   #prompt {
     flex: 1;
-    padding: 10px;
-    border-radius: 5px;
-    border: none;
-    font-size: 16px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #1a1a1a;
+    color: white;
+    font-size: 1rem;
+    outline: none;
+    transition: border 0.2s;
   }
+
+  #prompt:focus {
+    border-color: #3b82f6;
+  }
+
   #send {
-    padding: 10px 20px;
-    margin-left: 10px;
+    padding: 0 25px;
     border: none;
-    background: #00bfff;
-    color: #fff;
-    font-weight: bold;
-    border-radius: 5px;
+    background: #3b82f6;
+    color: white;
+    font-weight: 600;
+    border-radius: 8px;
     cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  #send:hover { background: #2563eb; }
+  #send:disabled { background: #555; cursor: not-allowed; }
+
+  /* Loading Indicator */
+  .typing-indicator {
+    align-self: flex-start;
+    color: #888;
+    font-size: 0.85rem;
+    margin-left: 10px;
+    display: none; /* Hidden by default */
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 </style>
 </head>
 <body>
 
-<h1>Gemini AI Chat</h1>
-<div id="chat"></div>
+<div class="chat-container">
+  <header>
+    <span>✨</span>
+    <h1>Gemini AI Assistant</h1>
+  </header>
+  
+  <div id="chat">
+    </div>
+  
+  <div class="typing-indicator" id="typingIndicator">
+    AI is thinking...
+  </div>
 
-<form id="inputForm">
-  <input type="text" id="prompt" placeholder="Type your message..." required />
-  <button type="submit" id="send">Send</button>
-</form>
+  <div class="input-area">
+    <form id="inputForm">
+      <input type="text" id="prompt" placeholder="Message Gemini..." autocomplete="off" required />
+      <button type="submit" id="send">Send</button>
+    </form>
+  </div>
+</div>
 
 <script>
 const chat = document.getElementById('chat');
 const form = document.getElementById('inputForm');
 const promptInput = document.getElementById('prompt');
+const sendBtn = document.getElementById('send');
+const typingIndicator = document.getElementById('typingIndicator');
+
+// Helper to add message to UI
+function addMessage(text, sender) {
+  const div = document.createElement('div');
+  div.className = `message ${sender}`;
+  
+  if (sender === 'ai') {
+    // Parse Markdown for AI response
+    div.innerHTML = marked.parse(text);
+  } else {
+    div.textContent = text;
+  }
+  
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight; // Auto scroll to bottom
+}
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const userMessage = promptInput.value.trim();
   if (!userMessage) return;
 
-  // Show user message
-  const userDiv = document.createElement('div');
-  userDiv.className = 'message user';
-  userDiv.textContent = 'You: ' + userMessage;
-  chat.appendChild(userDiv);
-
+  // 1. Add User Message
+  addMessage(userMessage, 'user');
   promptInput.value = '';
-  chat.scrollTop = chat.scrollHeight;
+  
+  // 2. Lock input and show loading
+  promptInput.disabled = true;
+  sendBtn.disabled = true;
+  typingIndicator.style.display = 'block';
 
   try {
+    // 3. Send to Backend
     const response = await fetch('http://localhost:3000/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: userMessage })
     });
+    
     const data = await response.json();
 
-    // Show AI reply
-    const aiDiv = document.createElement('div');
-    aiDiv.className = 'message ai';
-    aiDiv.textContent = 'AI: ' + data.reply;
-    chat.appendChild(aiDiv);
-    chat.scrollTop = chat.scrollHeight;
+    // 4. Add AI Response
+    if (data.reply) {
+      addMessage(data.reply, 'ai');
+    } else {
+      addMessage('No response received.', 'error');
+    }
 
   } catch (err) {
     console.error(err);
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'message ai';
-    errorDiv.textContent = 'AI: Error connecting to server.';
-    chat.appendChild(errorDiv);
+    addMessage('Error connecting to server. Is it running?', 'error');
+  } finally {
+    // 5. Unlock input and hide loading
+    promptInput.disabled = false;
+    sendBtn.disabled = false;
+    typingIndicator.style.display = 'none';
+    promptInput.focus();
+    chat.scrollTop = chat.scrollHeight;
   }
 });
 </script>
